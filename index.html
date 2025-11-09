@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fenntarthatóság Európában és a világban</title>
+
+  <!-- Vega-Lite és Vega beillesztése -->
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background-color: #f7f9fc;
+      margin: 0;
+      padding: 0;
+      color: #1f2937;
+    }
+
+    header {
+      background: linear-gradient(90deg, #1e3a8a, #3b82f6);
+      color: white;
+      text-align: center;
+      padding: 2rem 1rem;
+      border-bottom: 5px solid #2563eb;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+
+    section {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
+      margin-bottom: 2.5rem;
+    }
+
+    h2 {
+      color: #1e3a8a;
+      font-size: 1.4rem;
+      margin-bottom: 0.75rem;
+    }
+
+    label, select {
+      font-size: 1rem;
+      margin-right: 10px;
+    }
+
+    select {
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .chart {
+      width: 100%;
+      height: 450px;
+    }
+
+    footer {
+      text-align: center;
+      color: #6b7280;
+      font-size: 0.9rem;
+      padding: 1.5rem;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>🌍 Fenntarthatósági trendek a világban és Európában</h1>
+  </header>
+
+  <main>
+    <section>
+      <h2>Bevezetés</h2>
+      <p>
+        Ez az oldal a világ fenntarthatósági szintjét vizsgálja, különös tekintettel az
+        <strong>európai országok elektronikai hulladékának újrahasznosítási arányaira</strong>.
+        Az alábbi három vizualizáció a globális és európai környezeti trendeket mutatja be,
+        kezdve a CO₂-kibocsátással, majd az elektronikai hulladék újrahasznosításának időbeli
+        alakulásával és országonkénti arányaival.
+      </p>
+    </section>
+
+    <!-- 1️⃣ CO₂ kibocsátás időbeli trend -->
+    <section>
+      <h2>1. Vizualizáció – CO₂ kibocsátás alakulása országonként</h2>
+      <p>Ez a vonaldiagram az egy főre jutó éves CO₂-kibocsátás változását mutatja országonként.</p>
+
+      <label for="co2CountrySelect">Válassz országot/kontinenst:</label>
+      <select id="co2CountrySelect">
+        <option value="All">Minden</option>
+      </select>
+
+      <div id="vis1" class="chart"></div>
+    </section>
+
+    <!-- 2️⃣ Elektronikai hulladék újrahasznosítás időbeli trend -->
+    <section>
+      <h2>2. Vizualizáció – Elektronikai hulladék újrahasznosítás időbeli trendje</h2>
+      <p>
+        Ez a vonaldiagram az egyes európai országok elektronikai hulladék újrahasznosítási
+        arányának időbeli alakulását mutatja (2005–2018 között).
+      </p>
+
+      <label for="countrySelect">Válassz országot:</label>
+      <select id="countrySelect">
+        <option value="All">Mindegyik ország</option>
+      </select>
+
+      <div id="vis2" class="chart"></div>
+    </section>
+
+    <!-- 3️⃣ Elektronikai hulladék újrahasznosítás oszlopdiagram -->
+    <section>
+      <h2>3. Vizualizáció – Elektronikai hulladék újrahasznosítás aránya országonként</h2>
+      <p>
+        Ez az oszlopdiagram az európai országok elektronikai hulladékának újrahasznosítási arányát mutatja
+        az adott évben.
+      </p>
+
+      <label for="yearSelect">Válassz évet:</label>
+      <select id="yearSelect"></select>
+
+      <div id="vis3" class="chart"></div>
+    </section>
+  </main>
+
+  <footer>
+    Készítette: <strong>Fenntarthatósági Vizualizációs Projekt</strong> – 2025
+  </footer>
+
+  <script>
+    // ===== 1️⃣ CO₂ kibocsátás vonaldiagram =====
+    async function drawCO2Line(selectedCountry = "All") {
+      const response = await fetch("co-emissions-per-capita.csv");
+      const text = await response.text();
+      const rows = text.trim().split("\n").map(r => r.split(","));
+      rows.shift();
+
+      const data = rows.map(r => ({
+        Entity: r[0],
+        Code: r[1],
+        Year: +r[2],
+        Emission: +r[3]
+      }));
+
+      // Legördülő menü feltöltése
+      const countries = [...new Set(data.map(d => d.Entity))].sort();
+      const select = document.getElementById("co2CountrySelect");
+      if (select.options.length === 1) {
+        countries.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = c;
+          opt.textContent = c;
+          select.appendChild(opt);
+        });
+      }
+
+      const filtered = selectedCountry === "All"
+        ? data
+        : data.filter(d => d.Entity === selectedCountry);
+
+      const spec1 = {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "width": "container",
+        "height": 400,
+        "data": {"values": filtered},
+        "mark": {"type": "line", "point": true},
+        "encoding": {
+          "x": {
+            "field": "Year",
+            "type": "quantitative",
+            "title": "Év",
+            "axis": {"format": "d"}
+          },
+          "y": {
+            "field": "Emission",
+            "type": "quantitative",
+            "title": "CO₂ kibocsátás (tonna/fő)"
+          },
+          "color": {"field": "Entity", "type": "nominal", "title": "Ország"},
+          "tooltip": [
+            {"field": "Entity", "title": "Ország"},
+            {"field": "Year", "title": "Év"},
+            {"field": "Emission", "title": "CO₂ (tonna/fő)"}
+          ]
+        },
+        "config": {"axis": {"labelFontSize": 11}}
+      };
+
+      vegaEmbed("#vis1", spec1, {actions: false});
+    }
+
+    document.getElementById("co2CountrySelect")
+      .addEventListener("change", e => drawCO2Line(e.target.value));
+
+    drawCO2Line();
+
+
+    // ===== 2️⃣ Elektronikai hulladék trend vonaldiagram =====
+    async function drawEWasteTrend(selectedCountry = "All") {
+      const response = await fetch("electronic-waste-recycling-rate.csv");
+      const text = await response.text();
+      const rows = text.trim().split("\n").map(r => r.split(","));
+      rows.shift();
+
+      const data = rows.map(r => ({
+        Entity: r[0],
+        Code: r[1],
+        Year: +r[2],
+        Rate: +r[3]
+      }));
+
+      const countries = [...new Set(data.map(d => d.Entity))].sort();
+      const select = document.getElementById("countrySelect");
+      if (select.options.length === 1) {
+        countries.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = c;
+          opt.textContent = c;
+          select.appendChild(opt);
+        });
+      }
+
+      const filtered = selectedCountry === "All"
+        ? data
+        : data.filter(d => d.Entity === selectedCountry);
+
+      const spec2 = {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "width": "container",
+        "height": 400,
+        "data": {"values": filtered},
+        "mark": {"type": "line", "point": true},
+        "encoding": {
+          "x": {"field": "Year", "type": "quantitative", "title": "Év", "axis": {"format": "d"}},
+          "y": {"field": "Rate", "type": "quantitative", "title": "Újrahasznosítási arány (%)"},
+          "color": {"field": "Entity", "type": "nominal", "title": "Ország"},
+          "tooltip": [
+            {"field": "Entity", "title": "Ország"},
+            {"field": "Year", "title": "Év"},
+            {"field": "Rate", "title": "Újrahasznosítás (%)"}
+          ]
+        },
+        "config": {"axis": {"labelFontSize": 11}}
+      };
+
+      vegaEmbed("#vis2", spec2, {actions: false});
+    }
+
+    document.getElementById("countrySelect")
+      .addEventListener("change", e => drawEWasteTrend(e.target.value));
+
+    drawEWasteTrend();
+
+
+    // ===== 3️⃣ Elektronikai hulladék országonként – oszlopdiagram =====
+    async function drawEWasteBar(selectedYear) {
+      const response = await fetch("electronic-waste-recycling-rate.csv");
+      const text = await response.text();
+      const rows = text.trim().split("\n").map(r => r.split(","));
+      rows.shift();
+
+      const data = rows.map(r => ({
+        Entity: r[0],
+        Code: r[1],
+        Year: +r[2],
+        Rate: +r[3]
+      }));
+
+      const years = [...new Set(data.map(d => d.Year))].sort((a, b) => a - b);
+      const select = document.getElementById("yearSelect");
+      if (select.options.length === 0) {
+        years.forEach(y => {
+          const opt = document.createElement("option");
+          opt.value = y;
+          opt.textContent = y;
+          select.appendChild(opt);
+        });
+        select.value = years[years.length - 1];
+      }
+
+      const filtered = data.filter(d => d.Year === +select.value);
+
+      const spec3 = {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "width": "container",
+        "height": 400,
+        "data": {"values": filtered},
+        "mark": "bar",
+        "encoding": {
+          "x": {"field": "Entity", "type": "nominal", "title": "Ország", "sort": "-y"},
+          "y": {"field": "Rate", "type": "quantitative", "title": "Újrahasznosítási arány (%)"},
+          "color": {"field": "Rate", "type": "quantitative", "scale": {"scheme": "blues"}},
+          "tooltip": [
+            {"field": "Entity", "title": "Ország"},
+            {"field": "Rate", "title": "Újrahasznosítás (%)"}
+          ]
+        },
+        "config": {"axis": {"labelFontSize": 11}}
+      };
+
+      vegaEmbed("#vis3", spec3, {actions: false});
+    }
+
+    document.getElementById("yearSelect")
+      .addEventListener("change", e => drawEWasteBar(+e.target.value));
+
+    drawEWasteBar();
+  </script>
+</body>
+</html>
