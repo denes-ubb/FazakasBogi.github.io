@@ -1,0 +1,58 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "width": "container",
+  "height": 450,
+  "data": {
+    "url": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json",
+    "format": {"type": "topojson", "feature": "countries"}
+  },
+  "transform": [
+    {
+      "lookup": "properties.name",
+      "from": {
+        "data": {
+          "values": [
+            
+            
+          ]
+        },
+        "key": "Entity",
+        "fields": ["Emission", "Entity"]
+      }
+    }
+  ],
+  "mark": {
+    "type": "geoshape",
+    "stroke": "#b3d9ff"
+  },
+  "encoding": {
+    "color": {
+      "field": "Emission",
+      "type": "quantitative",
+      "scale": {
+        "scheme": "blues",
+        "domain": [0, 16],
+        "type": "linear"
+      },
+      "legend": {
+        "title": "CO₂ kibocsátás (tonna/fő, 2020)"
+      }
+    },
+    "ztooltip": [
+      {"field": "Entity", "type": "nominal", "title": "Ország"},
+      {"field": "Emission", "type": "quantitative", "title": "CO₂ (t/fő)", "format": ".2f"}
+    ]
+  },
+  "projection": {
+    "type": "mercator",
+    "center": [0, 20],
+    "scale": 100
+  },
+  "config": {
+    "view": {"stroke": null},
+    "axis": {"labelFontSize": 11},
+    "legend": {
+      "orient": "right"
+    }
+  }
+}

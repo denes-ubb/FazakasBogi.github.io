@@ -1,0 +1,32 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "width": "container",
+  "height": 400,
+  "data": {
+    "values": [
+      {"Entity": "Austria", "Rate": 42.5},
+      {"Entity": "Belgium", "Rate": 38.2},
+      {"Entity": "Denmark", "Rate": 45.8},
+      {"Entity": "Finland", "Rate": 39.1},
+      {"Entity": "France", "Rate": 35.7},
+      {"Entity": "Germany", "Rate": 41.3},
+      {"Entity": "Italy", "Rate": 28.4},
+      {"Entity": "Netherlands", "Rate": 44.2},
+      {"Entity": "Norway", "Rate": 47.6},
+      {"Entity": "Sweden", "Rate": 43.9},
+      {"Entity": "Switzerland", "Rate": 40.8},
+      {"Entity": "United Kingdom", "Rate": 36.5}
+    ]
+  },
+  "mark": "bar",
+  "encoding": {
+    "x": {"field": "Entity", "type": "nominal", "title": "Ország", "sort": "-y"},
+    "y": {"field": "Rate", "type": "quantitative", "title": "Újrahasznosítási arány (%)"},
+    "color": {"field": "Rate", "type": "quantitative", "scale": {"scheme": "blues"}},
+    "tooltip": [
+      {"field": "Entity", "title": "Ország"},
+      {"field": "Rate", "title": "Újrahasznosítás (%)"}
+    ]
+  },
+  "config": {"axis": {"labelFontSize": 11}}
+}

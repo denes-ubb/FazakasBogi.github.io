@@ -1,0 +1,17 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "width": "container",
+  "height": 400,
+  "mark": {"type": "line", "point": true},
+  "encoding": {
+    "x": {"field": "Year", "type": "quantitative", "title": "Év", "axis": {"format": "d"}},
+    "y": {"field": "Rate", "type": "quantitative", "title": "Újrahasznosítási arány (%)"},
+    "color": {"field": "Entity", "type": "nominal", "title": "Ország"},
+    "tooltip": [
+      {"field": "Entity", "title": "Ország"},
+      {"field": "Year", "title": "Év"},
+      {"field": "Rate", "title": "Újrahasznosítás (%)"}
+    ]
+  },
+  "config": {"axis": {"labelFontSize": 11}}
+}

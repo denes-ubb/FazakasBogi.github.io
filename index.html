@@ -9,6 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <!-- D3.js for map utilities -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
 
   <style>
     body {
@@ -66,6 +68,28 @@
     .chart {
       width: 100%;
       height: 450px;
+      position: relative;
+    }
+
+    .tooltip {
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .tooltip.show {
+      opacity: 1;
+    }
+
+    /* World map specific styles */
+    .country-path {
+      stroke: #fff;
+      stroke-width: 0.5;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .country-path:hover {
+      opacity: 0.8;
     }
 
     footer {
@@ -88,9 +112,9 @@
       <p>
         Ez az oldal a világ fenntarthatósági szintjét vizsgálja, különös tekintettel az
         <strong>európai országok elektronikai hulladékának újrahasznosítási arányaira</strong>.
-        Az alábbi három vizualizáció a globális és európai környezeti trendeket mutatja be,
+        Az alábbi <strong>négy</strong> vizualizáció a globális és európai környezeti trendeket mutatja be,
         kezdve a CO₂-kibocsátással, majd az elektronikai hulladék újrahasznosításának időbeli
-        alakulásával és országonkénti arányaival.
+        alakulásával és országonkénti arányaival, végül egy interaktív világ térképpel.
       </p>
     </section>
 
@@ -136,6 +160,18 @@
 
       <div id="vis3" class="chart"></div>
     </section>
+
+    <!-- 4️⃣ World Map - CO2 Emissions -->
+    <section>
+      <h2>4. Vizualizáció – Világtérkép: CO₂ kibocsátás összes országra adott évre</h2>
+      <p>Ez a térkép az összes ország egy főre jutó CO₂-kibocsátását mutatja a kiválasztott évre. Az intenzívebb kék szín magasabb kibocsátást jelöl.</p>
+      
+      <label for="mapYearSelect">Válassz évet:</label>
+      <select id="mapYearSelect"></select>
+
+      <div id="vis4" class="chart"></div>
+      <div id="mapTooltip" class="tooltip" style="opacity: 0; position: absolute; background: rgba(0,0,0,0.8); color: white; padding: 8px; border-radius: 4px; pointer-events: none; z-index: 1000; font-size: 12px;"></div>
+    </section>
   </main>
 
   <footer>
@@ -143,11 +179,23 @@
   </footer>
 
   <script>
+    /* 
+     * Vega-Lite Specifications are now loaded from external JSON files in the /specs/ directory:
+     * - co2-line-chart.json: Chart 1 - CO2 emissions line chart
+     * - ewaste-trend-line.json: Chart 2 - E-waste recycling trend line chart  
+     * - ewaste-bar-chart.json: Chart 3 - E-waste recycling bar chart by country
+     * - world-co2-map.json: Chart 4 - World map of CO2 emissions by country
+     * 
+     * Each function loads its specification and updates dynamic data (filtered datasets, 
+     * color domains, titles) before rendering with vegaEmbed.
+     */
+
     // ===== 1️⃣ CO₂ kibocsátás vonaldiagram =====
     async function drawCO2Line(selectedCountry = "All") {
       const response = await fetch("co-emissions-per-capita.csv");
       const text = await response.text();
       const rows = text.trim().split("\n").map(r => r.split(","));
+
       rows.shift();
 
       const data = rows.map(r => ({
@@ -173,32 +221,14 @@
         ? data
         : data.filter(d => d.Entity === selectedCountry);
 
+      // Load specification from external file
+      const specResponse = await fetch("specs/co2-line-chart.json");
+      const baseSpec1 = await specResponse.json();
+      
+      // Update data and dynamic parts
       const spec1 = {
-        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-        "width": "container",
-        "height": 400,
-        "data": {"values": filtered},
-        "mark": {"type": "line", "point": true},
-        "encoding": {
-          "x": {
-            "field": "Year",
-            "type": "quantitative",
-            "title": "Év",
-            "axis": {"format": "d"}
-          },
-          "y": {
-            "field": "Emission",
-            "type": "quantitative",
-            "title": "CO₂ kibocsátás (tonna/fő)"
-          },
-          "color": {"field": "Entity", "type": "nominal", "title": "Ország"},
-          "tooltip": [
-            {"field": "Entity", "title": "Ország"},
-            {"field": "Year", "title": "Év"},
-            {"field": "Emission", "title": "CO₂ (tonna/fő)"}
-          ]
-        },
-        "config": {"axis": {"labelFontSize": 11}}
+        ...baseSpec1,
+        data: { values: filtered }
       };
 
       vegaEmbed("#vis1", spec1, {actions: false});
@@ -215,6 +245,7 @@
       const response = await fetch("electronic-waste-recycling-rate.csv");
       const text = await response.text();
       const rows = text.trim().split("\n").map(r => r.split(","));
+
       rows.shift();
 
       const data = rows.map(r => ({
@@ -239,23 +270,14 @@
         ? data
         : data.filter(d => d.Entity === selectedCountry);
 
+      // Load specification from external file
+      const specResponse2 = await fetch("specs/ewaste-trend-line.json");
+      const baseSpec2 = await specResponse2.json();
+      
+      // Update data and dynamic parts
       const spec2 = {
-        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-        "width": "container",
-        "height": 400,
-        "data": {"values": filtered},
-        "mark": {"type": "line", "point": true},
-        "encoding": {
-          "x": {"field": "Year", "type": "quantitative", "title": "Év", "axis": {"format": "d"}},
-          "y": {"field": "Rate", "type": "quantitative", "title": "Újrahasznosítási arány (%)"},
-          "color": {"field": "Entity", "type": "nominal", "title": "Ország"},
-          "tooltip": [
-            {"field": "Entity", "title": "Ország"},
-            {"field": "Year", "title": "Év"},
-            {"field": "Rate", "title": "Újrahasznosítás (%)"}
-          ]
-        },
-        "config": {"axis": {"labelFontSize": 11}}
+        ...baseSpec2,
+        data: { values: filtered }
       };
 
       vegaEmbed("#vis2", spec2, {actions: false});
@@ -272,6 +294,7 @@
       const response = await fetch("electronic-waste-recycling-rate.csv");
       const text = await response.text();
       const rows = text.trim().split("\n").map(r => r.split(","));
+
       rows.shift();
 
       const data = rows.map(r => ({
@@ -295,22 +318,14 @@
 
       const filtered = data.filter(d => d.Year === +select.value);
 
+      // Load specification from external file
+      const specResponse3 = await fetch("specs/ewaste-bar-chart.json");
+      const baseSpec3 = await specResponse3.json();
+      
+      // Update data and dynamic parts
       const spec3 = {
-        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-        "width": "container",
-        "height": 400,
-        "data": {"values": filtered},
-        "mark": "bar",
-        "encoding": {
-          "x": {"field": "Entity", "type": "nominal", "title": "Ország", "sort": "-y"},
-          "y": {"field": "Rate", "type": "quantitative", "title": "Újrahasznosítási arány (%)"},
-          "color": {"field": "Rate", "type": "quantitative", "scale": {"scheme": "blues"}},
-          "tooltip": [
-            {"field": "Entity", "title": "Ország"},
-            {"field": "Rate", "title": "Újrahasznosítás (%)"}
-          ]
-        },
-        "config": {"axis": {"labelFontSize": 11}}
+        ...baseSpec3,
+        data: { values: filtered }
       };
 
       vegaEmbed("#vis3", spec3, {actions: false});
@@ -320,6 +335,132 @@
       .addEventListener("change", e => drawEWasteBar(+e.target.value));
 
     drawEWasteBar();
+
+    // ===== 4️⃣ World Map - CO₂ Emissions Visualization =====
+    async function drawWorldMap(selectedYear) {
+      const response = await fetch("co-emissions-per-capita.csv"); 
+      const text = await response.text();
+      const rows = text.trim().split("\n").map(r => r.split(","));
+
+      rows.shift();
+
+      const data = rows.map(r => ({
+        Entity: r[0],
+        Code: r[1],
+        Year: +r[2],
+        Emission: +r[3]
+      }));
+
+      // Populate year dropdown (similar to chart 3)
+      const years = [...new Set(data.map(d => d.Year))].sort((a, b) => a - b);
+      const yearSelect = document.getElementById("mapYearSelect");
+      if (yearSelect.options.length === 0) {
+        years.forEach(y => {
+          const opt = document.createElement("option");
+          opt.value = y;
+          opt.textContent = y;
+          yearSelect.appendChild(opt);
+        });
+        // Default to the most recent year
+        yearSelect.value = years[years.length - 1] || 2020;
+        selectedYear = +yearSelect.value;
+      }
+
+      // Filter data by selected year (like chart 3)
+      const filteredData = data.filter(d => d.Year === selectedYear);
+
+      // Get unique countries for this year and their emissions
+      const countryData = {};
+      filteredData.forEach(d => {
+        countryData[d.Entity] = {
+          Entity: d.Entity,
+          Code: d.Code,
+          Year: d.Year,
+          Emission: d.Emission
+        };
+      });
+
+      const mapData = Object.values(countryData);
+
+      // Find emission extent for color scaling (only for countries with data this year)
+      const emissionExtent = d3.extent(mapData, d => d.Emission);
+      const minEmission = emissionExtent[0] || 0;
+      const maxEmission = emissionExtent[1] || 10;
+
+      // Load world map specification from external file
+      const specResponse4 = await fetch("specs/world-co2-map.json");
+      const baseSpec4 = await specResponse4.json();
+      
+      // Update dynamic parts: data, color domain, and year references
+      const spec4 = {
+        ...baseSpec4,
+        transform: [
+          {
+            ...baseSpec4.transform[0],
+            from: {
+              ...baseSpec4.transform[0].from,
+              data: {
+                ...baseSpec4.transform[0].from.data,
+                values: mapData  // ← Inject real filtered data here
+              }
+            }
+          }
+        ],
+        encoding: {
+          ...baseSpec4.encoding,
+          color: {
+            ...baseSpec4.encoding.color,
+            scale: {
+              ...baseSpec4.encoding.color.scale,
+              domain: [minEmission, maxEmission]  // ← Dynamic color range
+            },
+            legend: {
+              ...baseSpec4.encoding.color.legend,
+              title: `CO₂ kibocsátás (tonna/fő, ${selectedYear})`  // ← Dynamic year
+            }
+          }
+        },
+        projection: {
+          ...baseSpec4.projection,
+          scale: 120  // Slightly larger for better visibility
+        }
+      };
+
+      // Clear previous visualization
+      d3.select("#vis4").selectAll("*").remove();
+      
+      // Embed the map
+      vegaEmbed("#vis4", spec4, {actions: false}).then(result => {
+        // Add custom tooltip handling if needed
+        const view = result.view;
+        view.addEventListener('mouseover', function(event, item) {
+          if (item && item.datum && item.datum.Entity) {
+            const tooltip = d3.select("#mapTooltip");
+            tooltip
+              .style("opacity", 1)
+              .html(`${item.datum.Entity}<br/>CO₂ (${selectedYear}): ${item.datum.Emission.toFixed(2)} t/fő`);
+          }
+        });
+
+        view.addEventListener('mousemove', function(event) {
+          d3.select("#mapTooltip")
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 10) + "px");
+        });
+
+        view.addEventListener('mouseout', function() {
+          d3.select("#mapTooltip").style("opacity", 0);
+        });
+      }).catch(console.error);
+    }
+
+    // Event listener for map year selection (like chart 3)
+    document.getElementById("mapYearSelect")
+      .addEventListener("change", e => drawWorldMap(+e.target.value));
+
+    // Initial map render with default year
+    drawWorldMap(2020); // Default year, will be overridden by dropdown population
+
   </script>
 </body>
 </html>
